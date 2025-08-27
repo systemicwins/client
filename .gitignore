@@ -1,0 +1,50 @@
+# Build artifacts
+.build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+
+# Model files (too large for git)
+*.mlmodel
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pb
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+coreml_env/
+*.egg-info/
+dist/
+build/
+
+# CSV data files
+*.csv
+
+# JSON data files (keeping config files)
+russell*.json
+iwm_holdings*.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

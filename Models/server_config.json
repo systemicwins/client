@@ -1,0 +1,6 @@
+{
+  "model_type": "server",
+  "endpoint": "http://localhost:8000/analyze",
+  "model_path": "models/secbert_russell2000_actual.pth",
+  "fallback": true
+}
