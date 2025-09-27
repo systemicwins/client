@@ -314,7 +314,7 @@ struct AppConfiguration {
         }
     }()
     
-    static let polygonAPIKey = ProcessInfo.processInfo.environment["POLYGON_API_KEY"] ?? "wlfIHBXoky_8R07M8SgVtxqQLEN3T5So"
+    static let polygonAPIKey = ProcessInfo.processInfo.environment["POLYGON_API_KEY"] ?? ""
     static let polygonWSURL = "wss://socket.polygon.io"
     static let refreshInterval: TimeInterval = 30.0 // seconds
     static let chartUpdateInterval: TimeInterval = 5.0 // seconds
