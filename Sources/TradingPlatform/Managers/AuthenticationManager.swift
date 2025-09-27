@@ -136,12 +136,28 @@ class AuthenticationManager: ObservableObject {
         // Store auth token securely
         keychain["auth_token"] = response.token
         apiService.setAuthToken(response.token)
-        
+
+        // Check account type and allow free retail access
+        let user = response.user
+        let isRetailAccount = user.isRetail
+        let isProAccount = user.isPro
+
+        print("User account type: retail=\(isRetailAccount), pro=\(isProAccount)")
+
+        // Allow retail users free access
+        if isRetailAccount {
+            print("Retail user logged in - granting free access")
+        } else if isProAccount {
+            print("Pro user logged in - full access granted")
+        } else {
+            print("Unknown account type: \(user.roleName ?? "unknown")")
+        }
+
         // Update state
-        currentUser = response.user
+        currentUser = user
         isAuthenticated = true
         errorMessage = nil
-        
+
         // Connect to WebSocket for real-time updates (non-blocking)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             WebSocketService.shared.connect()
@@ -205,7 +221,10 @@ class AuthenticationManager: ObservableObject {
             id: 999999,
             email: "offline@demo.com",
             name: "Offline User",
-            createdAt: Date()
+            createdAt: Date(),
+            roleId: 1,
+            roleName: "retail",
+            accountType: "retail"
         )
         
         currentUser = demoUser

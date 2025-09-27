@@ -18,10 +18,24 @@ struct User: Codable, Identifiable {
     let username: String
     let email: String?
     let createdAt: String?
-    
+    let roleId: Int?
+    let roleName: String?
+    let accountType: String?
+
     enum CodingKeys: String, CodingKey {
         case id, username, email
         case createdAt = "created_at"
+        case roleId = "role_id"
+        case roleName = "role_name"
+        case accountType = "account_type"
+    }
+
+    var isRetail: Bool {
+        return accountType?.lowercased() == "retail" || roleName?.lowercased() == "retail"
+    }
+
+    var isPro: Bool {
+        return accountType?.lowercased() == "pro" || roleName?.lowercased() == "pro"
     }
 }
 

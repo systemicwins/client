@@ -5,7 +5,9 @@ struct DiligenceView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var secService = SECFilingsService.shared
     @StateObject private var secFilingService = SECFilingService.shared
+    @StateObject private var edgarService = EDGARService.shared
     @StateObject private var secbertService = SECBERTService.shared
+    @StateObject private var analysisService = FilingAnalysisService.shared
     // Float history now handled by TradeableFloatChart component
     @State private var secFilings: [SECFiling] = []
     @State private var isLoadingFilings = false
@@ -16,6 +18,10 @@ struct DiligenceView: View {
     @State private var filingsFetched = 0
     @State private var isPerformingInference = false
     @State private var secbertAnalysis: SECBERTService.AnalysisResult?
+    
+    // Analysis results
+    @State private var ownershipAnalysis: FilingAnalysisService.OwnershipAnalysis?
+    @State private var financialHealthAnalysis: FilingAnalysisService.FinancialHealthAnalysis?
     
     // Cache for SEC filings per stock  
     @State private var secFilingsCache: [String: [SECFiling]] = [:]
@@ -622,7 +628,7 @@ struct DiligenceView: View {
         }
     }
     
-    // Load SEC filings using FMP API
+    // Load SEC filings using EDGAR API with full content
     private func loadSECFilings(for symbol: String) {
         // Check cache first
         if let cachedFilings = secFilingsCache[symbol], !cachedFilings.isEmpty {
@@ -644,13 +650,36 @@ struct DiligenceView: View {
                     self.totalFilingsToFetch = 30 // Will be updated with actual count
                 }
                 
-                // Create a custom fetching mechanism with progress tracking
-                let filings = try await fetchFilingsWithProgress(for: symbol, years: 5)
+                // Fetch 5 years of all major filings for comprehensive analysis:
+                // - 10-K/10-Q: Financial health, revenue, debt, cash flow
+                // - 8-K: Material events, insider transactions, major changes
+                // - DEF 14A: Executive compensation, board structure, shareholder proposals
+                // - Form 4: Insider buying/selling
+                // - SC 13D/G: Significant ownership changes (5%+ holders)
+                let majorFilingTypes = ["10-K", "10-Q", "8-K", "DEF 14A", "4", "SC 13D", "SC 13G", "13F"]
+                let edgarFilings = try await edgarService.fetchFilingsByYears(
+                    for: symbol, 
+                    years: 5, 
+                    types: majorFilingTypes, 
+                    includeFullContent: true
+                )
+                
+                // Convert to SECFiling format for compatibility
+                let filings = edgarFilings.map { edgarService.convertToSECFiling($0, symbol: symbol) }
                 
                 await MainActor.run {
                     self.secFilings = filings
                     self.secFilingsCache[symbol] = filings
                     self.isLoadingFilings = false
+                    
+                    // Perform ownership and financial analysis
+                    if !edgarFilings.isEmpty {
+                        self.ownershipAnalysis = analysisService.analyzeOwnership(from: edgarFilings)
+                        self.financialHealthAnalysis = analysisService.analyzeFinancialHealth(
+                            from: edgarFilings, 
+                            currentPrice: appState.selectedStock?.currentPrice
+                        )
+                    }
                     
                     // Switch to inference phase
                     if !filings.isEmpty {
@@ -669,20 +698,23 @@ struct DiligenceView: View {
     }
     
     private func fetchFilingsWithProgress(for symbol: String, years: Int) async throws -> [SECFiling] {
-        // Monitor the service's loading progress
+        // Monitor the EDGAR service's loading progress
         let progressTask = Task {
-            while secFilingService.isLoading {
+            while edgarService.isLoading {
                 await MainActor.run {
                     // Convert progress (0-1) to filing count estimate
                     let estimatedFilings = max(1, self.totalFilingsToFetch)
-                    self.filingsFetched = Int(secFilingService.loadingProgress * Double(estimatedFilings))
+                    self.filingsFetched = Int(edgarService.loadingProgress * Double(estimatedFilings))
                 }
                 try? await Task.sleep(nanoseconds: 100_000_000) // Update every 100ms
             }
         }
         
-        // Fetch the actual filings
-        let filings = try await secFilingService.fetchHistoricalFilings(for: symbol, years: years)
+        // Fetch from EDGAR API for the specified years (full content stored in vector database)
+        let edgarFilings = try await edgarService.fetchFilingsByYears(for: symbol, years: years, types: ["10-K", "10-Q", "8-K", "DEF 14A"], includeFullContent: true)
+        
+        // Convert to SECFiling format
+        let filings = edgarFilings.map { edgarService.convertToSECFiling($0, symbol: symbol) }
         
         // Cancel progress monitoring
         progressTask.cancel()

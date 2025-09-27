@@ -43,6 +43,22 @@ class AuthenticationManager: ObservableObject {
                     print("Login response received: success=\(response.success), hasToken=\(response.token != nil), hasUser=\(response.user != nil)")
                     if response.success, let token = response.token, let user = response.user {
                         print("Login successful for user: \(user.username)")
+
+                        // Check account type and allow free retail access
+                        let isRetailAccount = user.isRetail
+                        let isProAccount = user.isPro
+
+                        print("User account type: retail=\(isRetailAccount), pro=\(isProAccount)")
+
+                        // Allow retail users free access
+                        if isRetailAccount {
+                            print("Retail user logged in - granting free access")
+                        } else if isProAccount {
+                            print("Pro user logged in - full access granted")
+                        } else {
+                            print("Unknown account type: \(user.roleName ?? "unknown")")
+                        }
+
                         self?.keychain["auth_token"] = token
                         self?.apiService.setAuthToken(token)
                         self?.currentUser = user

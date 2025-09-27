@@ -81,6 +81,32 @@ struct LoginView: View {
                         .font(.caption)
                         .multilineTextAlignment(.center)
                 }
+
+                // Account type indicator (shown after successful login)
+                if authManager.isAuthenticated, let user = authManager.currentUser {
+                    VStack(spacing: 4) {
+                        if user.isRetail {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("Retail Account - Free Access")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .fontWeight(.medium)
+                            }
+                        } else if user.isPro {
+                            HStack {
+                                Image(systemName: "star.circle.fill")
+                                    .foregroundColor(.blue)
+                                Text("Pro Account - Full Access")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+                }
                 
                 // Login button
                 Button(action: login) {
